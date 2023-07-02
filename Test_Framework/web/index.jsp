@@ -28,5 +28,11 @@
 	</form>
 	<br>
 	<a href="all_employer">Liste Employer</a>
+        <br>
+	<a href="getAllEmployer">Liste Employer JSON (HashMap)</a>
+        <br>
+	<a href="getAllEmployer2">Liste Employer JSON (Employer[])</a>
+        <br>
+	<a href="liste_session">Liste Session</a>
 </body>
 </html>

@@ -9,6 +9,8 @@ import etu1965.framework.annotation.Scope;
 import etu1965.framework.annotation.Session;
 import etu1965.framework.annotation.Url;
 import etu1965.framework.annotation.Auth;
+import etu1965.framework.annotation.RestApi;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.RequestDispatcher;
@@ -166,43 +168,52 @@ public class FrontServlet extends HttpServlet {
 
         Method method = this.getMethodByUrl(objet,mappingUrlkey);
         Object[] parameters = this.getMethodParametersValues(request,response,method);
-        
-        ModelView mv = new ModelView();
-        if(this.need_auth(method) && session.getAttribute(authKey_1)==null ){
-            this.dispatchToLogin(request,response);
-        }else if(!this.need_profil(method).equals("") && session.getAttribute(authKey_2)==null){
-            this.dispatchToLogin(request,response);
-        }else if(!this.need_profil(method).equals("") && session.getAttribute(authKey_2)!=null && !session.getAttribute(authKey_2).equals(need_profil(method))){
-            this.dispatchToLogin(request,response);
+        if(this.is_rest_api(method)){
+            Object temp ;
+            if(parameters.length==0){
+                temp = method.invoke(objet);
+            }else{
+                temp = method.invoke(objet,parameters);
+            }  
+            this.sendJson(temp,response);
         }else{
-            mv = this.getModelView(method, parameters , objet);
-        }
-
-        // Json ou dispatch
-        if(mv.isJson())
-        {
-            this.sendJson(mv.getData(), response);
-        }else{
-            Set<String> mvKeys = mv.getData().keySet();
-            for(String mvKey : mvKeys){
-                request.setAttribute(mvKey , mv.getData().get(mvKey));
+            ModelView mv = new ModelView();
+            if(this.need_auth(method) && session.getAttribute(authKey_1)==null ){
+                this.dispatchToLogin(request,response);
+            }else if(!this.need_profil(method).equals("") && session.getAttribute(authKey_2)==null){
+                this.dispatchToLogin(request,response);
+            }else if(!this.need_profil(method).equals("") && session.getAttribute(authKey_2)!=null && !session.getAttribute(authKey_2).equals(need_profil(method))){
+                this.dispatchToLogin(request,response);
+            }else{
+                mv = this.getModelView(method, parameters , objet);
             }
     
-            if(mv.getAuth().get(authKey_1)!=null)
+            // Json ou dispatch
+            if(mv.isJson())
             {
-                session.setAttribute(authKey_1,mv.getAuth().get(authKey_1));
-                if(mv.getAuth().get(authKey_2)!=null)
-                {
-                    session.setAttribute(authKey_2,mv.getAuth().get(authKey_2));
+                this.sendJson(mv.getData(), response);
+            }else{
+                Set<String> mvKeys = mv.getData().keySet();
+                for(String mvKey : mvKeys){
+                    request.setAttribute(mvKey , mv.getData().get(mvKey));
                 }
+        
+                if(mv.getAuth().get(authKey_1)!=null)
+                {
+                    session.setAttribute(authKey_1,mv.getAuth().get(authKey_1));
+                    if(mv.getAuth().get(authKey_2)!=null)
+                    {
+                        session.setAttribute(authKey_2,mv.getAuth().get(authKey_2));
+                    }
+                }
+        
+                RequestDispatcher dispat = request.getRequestDispatcher(mv.getView());
+                dispat.forward(request,response);
             }
-    
-            RequestDispatcher dispat = request.getRequestDispatcher(mv.getView());
-            dispat.forward(request,response);
         }
     }
 
-    public void sendJson(HashMap<String,Object> data , HttpServletResponse response) throws Exception
+    public void sendJson(Object data , HttpServletResponse response) throws Exception
     {
         // Conversion du HashMap en JSON
         Gson gson = new GsonBuilder().create();
@@ -259,6 +270,17 @@ public class FrontServlet extends HttpServlet {
         Annotation[] annotations = method.getAnnotations();
         for (int j = 0; j < annotations.length; j++) {
             if(annotations[j].annotationType()==Session.class)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    public boolean is_rest_api(Method method)
+    {
+        Annotation[] annotations = method.getAnnotations();
+        for (int j = 0; j < annotations.length; j++) {
+            if(annotations[j].annotationType()==RestApi.class)
             {
                 return true;
             }
