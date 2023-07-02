@@ -1,6 +1,7 @@
 package modele;
 
 import etu1965.framework.annotation.Url;
+import etu1965.framework.annotation.RestApi;
 import etu1965.framework.annotation.Session;
 import etu1965.framework.*;
 import etu1965.framework.annotation.Auth;
@@ -54,6 +55,17 @@ public class Employer {
         mv.addItem("listes", list_emp);
         mv.setJson(true);
         return mv;
+    }
+
+    @RestApi
+    @Url(lien="getAllEmployer2")
+    public Employer[] getAll2(){
+        String[] diplome = {"Licence","Bacc"};
+        Employer[] list_emp = new Employer[3];
+        list_emp[0] = new Employer(1,"Emp 1" , Date.valueOf("2000-01-01") , diplome);
+        list_emp[1] = new Employer(2,"Emp 2" , Date.valueOf("2000-01-01") , diplome);
+        list_emp[2] = new Employer(3,"Emp 3" , Date.valueOf("2000-01-01") , diplome);
+        return list_emp;
     }
 
     @Auth(profil="admin")
