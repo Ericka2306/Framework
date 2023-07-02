@@ -49,9 +49,11 @@ public class FrontServlet extends HttpServlet {
         super.init(config);
         String pkg = this.getInitParameter("package");
 
+        // Maka ny methode rehetre misy annotation URL 
         HashMap<String,Mapping> mappingUrl =  this.allMappingUrls(pkg);
         this.setMappingUrls(mappingUrl);
 
+        // Maka ny classe ho atao singleton rehetra (misy annotation scope(value="Singleton"))
         HashMap<String,Object> singleton = this.allSingletons(pkg);
         this.setSingletons(singleton);
     }
@@ -59,27 +61,38 @@ public class FrontServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         PrintWriter out = response.getWriter();
+        // Maka ny url andehanana (ilaina afantarana anle methode hiasa)
         String servletName = request.getServletPath().substring(1);
 
         HashMap<String,Mapping> mappingUrls = this.getMappingUrls(); 
         try {
+            // Maka ny anarana classe mifanaraka amle url andehanana
             String className = mappingUrls.get(servletName).getClassName();
+            // Objet appelant anle methode
             Object objet;
+
+            // Jerena ra singleton le classe
             if(singletons.containsKey(className))
             {
+                // Maka anle singleton anatinle HashMap 
                 objet = singletons.get(className);
+                // Raha mbola tsisy de instancier-na de apetraka antin le HashMap
                 if(objet == null)
                 {
                     Class<?> classMapping = Class.forName(this.getInitParameter("package")+"."+mappingUrls.get(servletName).getClassName());
                     objet = classMapping.getDeclaredConstructor().newInstance();
                     singletons.replace(className, objet);
                 }
+                // Atao valeur par defaut dooly leh attribut satria mety ampifangaro données
                 this.resetObject(objet);
             }else{
+                // Raha tsy singleton de instancier-na fotsiny de apesaina
                 Class<?> classMapping = Class.forName(this.getInitParameter("package")+"."+mappingUrls.get(servletName).getClassName());
                 objet = classMapping.getDeclaredConstructor().newInstance();
             }
+            // Manisy ny valeur rehetra anle objet ra misy(ohatra hoe avy am formulaire)
             this.setObject(request,response,objet,servletName);
+            // ato no mi-executer anle methode sy m-dispatch 
             this.dispatchModelView(request , response , objet , servletName);
 
         } catch (Exception ex) {
@@ -87,6 +100,7 @@ public class FrontServlet extends HttpServlet {
         }
     }
 
+    // Mi-set anle objet appelant
     public void setObject(HttpServletRequest request , HttpServletResponse response , Object objet , String mappingUrlkey)
             throws Exception{
 
@@ -98,8 +112,11 @@ public class FrontServlet extends HttpServlet {
         }
 
         for(int i=0 ; i<attributs.length ; i++){
+            // setter anle objet
             Method set = objet.getClass().getDeclaredMethod(setters[i], attributs[i].getType());
+            // mi-check hoe misy attribut session ve leh objet , de mila anle session ve le user
             if(attributs[i].getName().equals("session") && this.need_session(method)){
+                // Raha mila le user de setter-na amle session rehetra leh attribut session anle objet appelant
                 HashMap<String , Object> hashMapSessions = new HashMap<String,Object>();
                 HttpSession session = request.getSession();
                 Enumeration<String> attributeNames = session.getAttributeNames();
@@ -110,7 +127,7 @@ public class FrontServlet extends HttpServlet {
                 }
                 set.invoke(objet, hashMapSessions);
             }else{
-                
+                // Raha misy type FileUpload leh attribut de manambotra objet FileUpload lou de iny no setter-na amle attribut
                 if(attributs[i].getType() == (new FileUpload()).getClass() && request.getContentType() != null && request.getContentType().toLowerCase().startsWith("multipart/form-data")){
                     Part filePart = request.getPart(attributs[i].getName());
                     if (filePart != null) {
@@ -122,6 +139,7 @@ public class FrontServlet extends HttpServlet {
                         set.invoke(objet,fileUpload);
                     }
                 }else{
+                    // Akotrzay alaina fotsiny leh valeur ana input na leh misy ? eny am url ,de caster amle type-nle attribut, de setter-na
                     String[] parameter = request.getParameterValues(attributs[i].getName());
                     if(parameter!=null){
                         set.invoke(objet,FrontServlet.castStringToType(parameter,attributs[i].getType()));
@@ -133,15 +151,19 @@ public class FrontServlet extends HttpServlet {
 
     }
 
+    // Maka anle methode ho ampesaina
     public Method getMethodByUrl(Object objet , String mappingUrlkey)
             throws Exception{
+        // Method rehetra ao amle classe
         Method[] all_methods = objet.getClass().getDeclaredMethods();
         for(int i=0 ; i<all_methods.length ; i++){
+            // Annotation rehetra amle method[i]
             Annotation[] annotations = all_methods[i].getAnnotations();
             for (int j = 0; j < annotations.length; j++) {
                 if(annotations[j].annotationType()==Url.class)
                 {
                     Url url=(Url)annotations[j];
+                    // Comparer-na ra mitovy le lien eo amle annotation sy leh lien n-taper-na tam navigateur
                     if(url.lien().compareTo(mappingUrlkey)==0 && all_methods[i].getName().compareTo(mappingUrls.get(mappingUrlkey).getMethod())==0){
                         return all_methods[i];
                     }
@@ -151,6 +173,7 @@ public class FrontServlet extends HttpServlet {
         throw new Exception("Method not found");
     }
 
+    // Maka ny argument anle method ra misy
     public Object[] getMethodParametersValues(HttpServletRequest request , HttpServletResponse response , Method method){
         Parameter[] parameters = method.getParameters();
         Object[] parametersValue = new Object[parameters.length];
@@ -160,14 +183,18 @@ public class FrontServlet extends HttpServlet {
         }
         return parametersValue;
     }
+    
     public void dispatchModelView(HttpServletRequest request , HttpServletResponse response , Object objet , String mappingUrlkey)
             throws Exception{
         HttpSession session = request.getSession();
         String authKey_1 = this.getInitParameter("connected");
         String authKey_2 = this.getInitParameter("profil");
 
+        // Maka ny methode ho apesaina
         Method method = this.getMethodByUrl(objet,mappingUrlkey);
+        // Maka ny valeur-ny arguments
         Object[] parameters = this.getMethodParametersValues(request,response,method);
+        // Jerena ra Rest-api leh method de tsy mireturn ModelView (tsy m-dispatch any am page fa mandefa JSON fotsiny) 
         if(this.is_rest_api(method)){
             Object temp ;
             if(parameters.length==0){
@@ -178,6 +205,10 @@ public class FrontServlet extends HttpServlet {
             this.sendJson(temp,response);
         }else{
             ModelView mv = new ModelView();
+
+            // Jerena ra mila authentification leh methode , na mila profil manokana , na izy roa
+
+            // Raha mila leh izy ka nefa tsisy anaty session de midispatch any am Login
             if(this.need_auth(method) && session.getAttribute(authKey_1)==null ){
                 this.dispatchToLogin(request,response);
             }else if(!this.need_profil(method).equals("") && session.getAttribute(authKey_2)==null){
@@ -185,19 +216,31 @@ public class FrontServlet extends HttpServlet {
             }else if(!this.need_profil(method).equals("") && session.getAttribute(authKey_2)!=null && !session.getAttribute(authKey_2).equals(need_profil(method))){
                 this.dispatchToLogin(request,response);
             }else{
+                // Raha tsy mila leh izy na mila fa misy anaty session de tonga de alaina ny Modelview retourner-nle fonction
                 mv = this.getModelView(method, parameters , objet);
             }
-    
-            // Json ou dispatch
+            
+            // Ra ohatra ka mila supprimer ny session rehetra (ohatra hoe mi-deco)
+            if(mv.isInvalidateSession()){
+                session.invalidate();
+            }
+            // Raha misy session manokana ho supprimer-na
+            for(int i=0 ; i<mv.getRemoveSession().size() ; i++){
+                session.removeAttribute(mv.getRemoveSession().get(i));
+            }
+
+            // Jerena sode rest-api ko leh izy (fa eto mireturn modelview leh fonction)
             if(mv.isJson())
             {
+                // Raha rest-api de ny données rehetra ao amle modelview no alefa am Json
                 this.sendJson(mv.getData(), response);
             }else{
+                // Raha tsy rest-api de alefa any amle page ny donnee rehetra (request.setattribute(...))
                 Set<String> mvKeys = mv.getData().keySet();
                 for(String mvKey : mvKeys){
                     request.setAttribute(mvKey , mv.getData().get(mvKey));
                 }
-        
+                // Raha misy session alefanle user de apdirina am session anle servlet dooly
                 if(mv.getAuth().get(authKey_1)!=null)
                 {
                     session.setAttribute(authKey_1,mv.getAuth().get(authKey_1));
@@ -206,13 +249,15 @@ public class FrontServlet extends HttpServlet {
                         session.setAttribute(authKey_2,mv.getAuth().get(authKey_2));
                     }
                 }
-        
+                // mi-dispatch makany amle vue nataon ny user
                 RequestDispatcher dispat = request.getRequestDispatcher(mv.getView());
                 dispat.forward(request,response);
             }
+
+            
         }
     }
-
+    // Mandefa donnee ho Json
     public void sendJson(Object data , HttpServletResponse response) throws Exception
     {
         // Conversion du HashMap en JSON
@@ -229,6 +274,7 @@ public class FrontServlet extends HttpServlet {
         RequestDispatcher dispat = request.getRequestDispatcher("login.jsp");
         dispat.forward(request,response);
     }
+    // Mi-invoke anle method (azahona anle ModelView)
     public ModelView getModelView(Method method , Object[] parameters , Object objet) throws Exception
     {
         ModelView mv = new ModelView();
@@ -239,6 +285,7 @@ public class FrontServlet extends HttpServlet {
         }  
         return mv;
     }
+    // micheck hoe mila authentification ve le method
     public boolean need_auth(Method method)
     {
         Annotation[] annotations = method.getAnnotations();
@@ -250,6 +297,7 @@ public class FrontServlet extends HttpServlet {
         }
         return false;
     }
+    // micheck hoe mila profil manokana ve le method
     public String need_profil(Method method)
     {
         Annotation[] annotations = method.getAnnotations();
@@ -265,6 +313,7 @@ public class FrontServlet extends HttpServlet {
         }
         return "";
     }
+    // micheck hoe mila anle session ve leh user
     public boolean need_session(Method method)
     {
         Annotation[] annotations = method.getAnnotations();
@@ -276,6 +325,7 @@ public class FrontServlet extends HttpServlet {
         }
         return false;
     }
+    // micheck hoe rest_api ve leh method
     public boolean is_rest_api(Method method)
     {
         Annotation[] annotations = method.getAnnotations();
@@ -287,6 +337,8 @@ public class FrontServlet extends HttpServlet {
         }
         return false;
     }
+
+    // Maka ny classe rehetra misy anle url
     public HashMap<String, Mapping> allMappingUrls(String pckg){
         HashMap<String, Mapping> mappingUrl = new HashMap<String, Mapping>();
 
@@ -322,6 +374,7 @@ public class FrontServlet extends HttpServlet {
 
         return mappingUrl;
     }
+    // Maka ny classe rehetra singleton
     public HashMap<String,Object> allSingletons(String pckg)
     { 
         HashMap<String,Object> singletons = new HashMap<String,Object>();
@@ -352,6 +405,7 @@ public class FrontServlet extends HttpServlet {
         }
         return singletons;
     }
+    // mi-reinitialiser objet
     public void resetObject(Object obj) {
         Class<?> clazz = obj.getClass();
         try {
@@ -369,6 +423,7 @@ public class FrontServlet extends HttpServlet {
         }
     }
 
+    // Mamerina ny attribut ho valeur par defaut
     private void setPrimitiveDefault(Object obj, Field field) throws IllegalAccessException {
         Class<?> fieldType = field.getType();
         if (fieldType == boolean.class) {
@@ -389,6 +444,7 @@ public class FrontServlet extends HttpServlet {
             field.setChar(obj, '\u0000');
         }
     }
+    // Mi-caster string ho type ze omena
     public static <T> T castStringToType(String[] value, Class<T> type) {
         if(value==null){
             return null;
@@ -458,6 +514,7 @@ public class FrontServlet extends HttpServlet {
         }
     }
 
+    // mamadika fichier uploader-na ho lasa bbyte[]
     private byte[] convertToByteArray(Part filePart) throws IOException {
         InputStream inputStream = filePart.getInputStream();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
