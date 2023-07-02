@@ -26,7 +26,6 @@ Pré-requis:
 Remarque :            
     . Si il y a des insertion à travers des formulaires le nom des champs dans le formulaire devrait correspondre aux noms des attributs de votre classe
         Exemple :
-            
             Employer.java
                 class Employer{
                     int id;
