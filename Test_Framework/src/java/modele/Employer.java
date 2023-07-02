@@ -17,6 +17,7 @@ public class Employer {
     String[] diplome;
     int[] choix;
     FileUpload image;
+    // Raha ohatra ka mila session leh olona de tsy maintsy manisy HashMap session
     HashMap<String,Object> session;
 
 
@@ -51,12 +52,16 @@ public class Employer {
         list_emp[2] = new Employer(3,"Emp 3" , Date.valueOf("2000-01-01") , diplome);
 
         ModelView mv = new ModelView();
+        // vue andehanana apres execution anle methode
         mv.setView("listEmployer.jsp");
+        // mandefa valeur amle modelview (clé , valeur)
         mv.addItem("listes", list_emp);
+        // miteny hoe alefa Json leh donnee
         mv.setJson(true);
         return mv;
     }
 
+    // Tsy mireturn Modelview fa rest-api leh izy de ze valeur de retour no alefa Json
     @RestApi
     @Url(lien="getAllEmployer2")
     public Employer[] getAll2(){
@@ -98,7 +103,7 @@ public class Employer {
         return mv;
     }
 
-    @Session
+    @Session // Miteny hoe mila session izy 
     @Url(lien="liste_session")
     public ModelView getListeSession()
     {

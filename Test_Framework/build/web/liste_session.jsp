@@ -19,7 +19,8 @@
             <% out.print(String.valueOf(liste_session.get(key))); %>
         </li>    
         <% } %>
-            
+        <a href="delete_profil?profil=profil">Supprimer Profil</a>
+        <a href="log_out">Se Deconnecter</a>
 	</ul>
 </body>
 </html>

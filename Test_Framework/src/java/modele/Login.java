@@ -16,12 +16,28 @@ public class Login {
     @Url(lien="sign_up")
     public ModelView seConnecter(){
         ModelView mv = new ModelView();
+        // Reto manampy session izy
         mv.addAuth("is_connected", true);
         mv.addAuth("profil", this.getUserName());
         mv.setView("index.jsp");
         return mv;
     }
-
+    @Url(lien="log_out")
+    public ModelView seDeconnecter(){
+        ModelView mv = new ModelView();
+        // miteny hoe supprimer-na dooly ny session ao
+        mv.setInvalidateSession(true);
+        mv.setView("index.jsp");
+        return mv;
+    }
+    @Url(lien="delete_profil")
+    public ModelView deleteProfil(String profil){
+        ModelView mv = new ModelView();
+        // Atao anaty RemoveSession ze session tina supprimer-na
+        mv.addRemoveSession("profil");
+        mv.setView("index.jsp");
+        return mv;
+    }
     public String getUserName() {
         return userName;
     }
