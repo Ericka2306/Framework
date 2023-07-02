@@ -2,6 +2,7 @@ package modele;
 
 import etu1965.framework.annotation.Url;
 import etu1965.framework.*;
+import etu1965.framework.annotation.Auth;
 import etu1965.framework.annotation.Scope;
 import java.sql.Date;
 
@@ -37,6 +38,7 @@ public class Employer {
         return mv;
     }
 
+    @Auth(profil="admin")
     @Url(lien="save_employer")
     public ModelView save(){
         ModelView mv = new ModelView();
@@ -45,6 +47,7 @@ public class Employer {
         return mv;
     }
     
+    @Auth
     @Url(lien="employer_by_Id")
     public ModelView getEmployerById(int id){
         String[] diplome = {"Licence","Bacc"};
