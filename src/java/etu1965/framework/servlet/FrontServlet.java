@@ -8,14 +8,25 @@ package etu1965.framework.servlet;
 
 
 import etu1965.framework.Mapping;
+import etu1965.framework.annotation.Url;
+import jakarta.servlet.ServletConfig;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.reflections.Reflections;
+import org.reflections.scanners.MethodAnnotationsScanner;
 
 /**
  *
@@ -24,13 +35,12 @@ import java.util.HashMap;
 public class FrontServlet extends HttpServlet { 
     HashMap<String,Mapping> mappingUrls;
 
-    public HashMap<String, Mapping> getMappingUrls() {
-        return mappingUrls;
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
+        HashMap<String,Mapping> mappingUrls = FrontServlet.getAllMapping();
+        this.setMappingUrls(mappingUrls);
     }
-
-    public void setMappingUrls(HashMap<String, Mapping> mappingUrls) {
-        this.mappingUrls = mappingUrls;
-    }
+    
     
     
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -50,6 +60,33 @@ public class FrontServlet extends HttpServlet {
             String[] elementValues = request.getParameterValues(element);
             for(int i=0 ; i<elementValues.length ; i++){
                 out.println(element+" "+(i+1)+" : "+elementValues[i]);
+            }
+        }
+        out.println("");
+
+        out.println("Mapping Urls :");
+        HashMap<String,Mapping> mappingUrls = this.getMappingUrls();
+        Set keys = mappingUrls.keySet();
+        Iterator itr = keys.iterator();
+        while(itr.hasNext()){
+            String key = (String) itr.next();
+            out.print("Key : "+key+" , ");
+            out.println("Value : Class: "+mappingUrls.get(key).getClassName()+", Method: "+mappingUrls.get(key).getMethod());
+        }
+        
+        out.println("");
+        itr = keys.iterator();
+        while(itr.hasNext()){
+            String key = (String) itr.next();
+            if(key.equals(request.getHttpServletMapping().getMatchValue())){
+                try {
+                    Class<?> classMapping = Class.forName("etu2043.framework.modele."+mappingUrls.get(key).getClassName());
+                    Object objet = classMapping.newInstance();
+                    Method method = objet.getClass().getMethod(mappingUrls.get(key).getMethod());
+                    out.println("Action : "+String.valueOf(method.invoke(objet)));
+                } catch (Exception ex) {
+                    out.println(ex.getMessage());
+                }
             }
         }
     }
@@ -91,5 +128,32 @@ public class FrontServlet extends HttpServlet {
     @Override
     public String getServletInfo() {
         return "Short description";
-    }// </editor-fold>   
+    }// </editor-fold> 
+    
+    public HashMap<String, Mapping> getMappingUrls() {
+        return mappingUrls;
+    }
+
+    public void setMappingUrls(HashMap<String, Mapping> mappingUrls) {
+        this.mappingUrls = mappingUrls;
+    }
+    
+    public static HashMap<String,Mapping> getAllMapping(){
+        HashMap<String , Mapping> mappingUrls = new HashMap<String,Mapping>();
+        Set<Method> method = new Reflections("etu2043.framework.modele",new MethodAnnotationsScanner()).getMethodsAnnotatedWith(Url.class);
+        Iterator<Method> itr = method.iterator();
+        while(itr.hasNext()){
+            Method m = itr.next();
+            
+            Mapping tempMapping = new Mapping();
+            tempMapping.setClassName(m.getDeclaringClass().getSimpleName());
+            tempMapping.setMethod(m.getName());
+            
+            Url url = m.getAnnotation(Url.class);
+            String cle = url.lien();
+            
+            mappingUrls.put(cle, tempMapping);
+        }
+        return mappingUrls;
+    }
 }
